@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14121f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<title>¡BASTA!</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<style>
+  :root{
+    --bg:#14121f; --bg2:#1d1a2e; --card:#262238;
+    --ink:#ffffff; --muted:rgba(255,255,255,.62); --muted2:rgba(255,255,255,.34);
+    --c0:#ff4d5e; --c1:#2e8fff; --c2:#ffc42e; --c3:#29c26b; --c4:#ff8a2e; --c5:#a855f7;
+    --ok:#29c26b; --okd:#1c9c52;
+    --r:24px; --rs:16px;
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-t: env(safe-area-inset-top, 0px);
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    background:radial-gradient(120% 120% at 50% 0%, #201c33 0%, var(--bg) 60%);
+    color:var(--ink); overscroll-behavior:none; user-select:none; -webkit-user-select:none;
+    font-family:"Trebuchet MS", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing:antialiased; touch-action:manipulation;
+  }
+  input{user-select:text; -webkit-user-select:text}
+  #app{position:fixed; inset:0; display:flex; flex-direction:column}
+  .screen{position:absolute; inset:0; display:none; flex-direction:column; padding:calc(14px + var(--safe-t)) 16px calc(16px + var(--safe-b)); animation:fade .25s ease}
+  .screen.active{display:flex}
+  @keyframes fade{from{opacity:0} to{opacity:1}}
+
+  .btn{border:0; border-radius:var(--rs); font-family:inherit; font-weight:800; color:var(--ink);
+       background:var(--card); padding:18px 20px; font-size:1.15rem; cursor:pointer;
+       display:flex; align-items:center; justify-content:center; gap:10px; transition:transform .08s ease, filter .15s ease}
+  .btn:active{transform:scale(.96)}
+  .btn.big{font-size:1.6rem; padding:26px; border-radius:var(--r)}
+  .btn.ghost{background:rgba(255,255,255,.06)}
+  .btn .ico{font-size:1.5rem; line-height:1}
+  .icobtn{width:54px; height:54px; border-radius:50%; background:rgba(255,255,255,.08); border:0;
+          color:var(--ink); font-size:1.4rem; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:0 0 auto}
+  .icobtn:active{transform:scale(.92)}
+  .play{background:linear-gradient(180deg,#33d27a,var(--okd)); box-shadow:0 10px 0 #157a3f, 0 16px 30px rgba(41,194,107,.4); border-radius:var(--r)}
+  .play:active{transform:translateY(6px) scale(.99); box-shadow:0 4px 0 #157a3f, 0 8px 16px rgba(41,194,107,.4)}
+
+  /* SPLASH */
+  #splash{justify-content:center; align-items:center; background:var(--bg)}
+  .logo{display:flex; gap:4px; font-weight:900; font-size:clamp(56px,18vw,120px); line-height:1}
+  .logo span{display:inline-block; animation:pop .5s cubic-bezier(.2,1.4,.4,1) backwards}
+  .logo span:nth-child(1){color:var(--c0); animation-delay:.02s}
+  .logo span:nth-child(2){color:var(--c1); animation-delay:.10s}
+  .logo span:nth-child(3){color:var(--c2); animation-delay:.18s}
+  .logo span:nth-child(4){color:var(--c3); animation-delay:.26s}
+  .logo span:nth-child(5){color:var(--c4); animation-delay:.34s}
+  @keyframes pop{from{opacity:0; transform:translateY(30px) scale(.5)} to{opacity:1; transform:none}}
+  .tag{margin-top:14px; color:var(--muted); font-weight:700; letter-spacing:.5px; animation:fade 1s .4s backwards}
+
+  /* HOME */
+  #home{justify-content:center; gap:18px; text-align:center}
+  #home .logo{justify-content:center; margin-bottom:2px}
+  #home .tag{margin-top:0; margin-bottom:14px}
+  #home .play{font-size:2rem; padding:30px}
+  .menu-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:6px}
+  .menu-grid .btn{justify-content:flex-start}
+
+  .top{display:flex; align-items:center; gap:12px; margin-bottom:14px}
+  .top h2{font-size:1.5rem; font-weight:900; flex:1}
+  .scroll{overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:12px; -webkit-overflow-scrolling:touch; padding-bottom:8px}
+
+  /* JUGADORES (setup) */
+  .prow{display:flex; gap:10px; align-items:center}
+  .prow input{flex:1; background:var(--card); border:0; border-radius:var(--rs); color:var(--ink);
+              font-family:inherit; font-weight:800; font-size:16px; padding:18px 16px; outline:none}
+  .prow input:focus{box-shadow:0 0 0 2px var(--c1) inset}
+  .hint{color:var(--muted); font-weight:700; text-align:center; font-size:.95rem}
+
+  /* JUEGO */
+  #game{padding-top:calc(10px + var(--safe-t)); gap:10px}
+  .ghead{display:flex; align-items:center; gap:10px}
+  .pill{background:rgba(255,255,255,.08); border-radius:999px; padding:8px 14px; font-weight:800; font-size:.95rem; white-space:nowrap}
+  .ghead .grow{flex:1}
+  .turnbar{display:flex; align-items:center; justify-content:center; gap:12px; text-align:center}
+  .turnbar .who{font-weight:900; font-size:clamp(1.4rem,7vw,2.1rem); line-height:1.05}
+  .turnbar .who small{display:block; color:var(--muted); font-size:.85rem; font-weight:800; letter-spacing:.5px}
+  .selBadge{width:64px; height:64px; border-radius:16px; display:none; align-items:center; justify-content:center;
+            font-weight:900; font-size:2.1rem; box-shadow:0 6px 0 rgba(0,0,0,.3)}
+  .themebar{display:flex; align-items:center; gap:10px; background:var(--card); border-radius:var(--rs); padding:12px 14px}
+  .themebar .t{flex:1; font-weight:800; font-size:1.12rem; line-height:1.15}
+  .themebar .mini{width:42px;height:42px;font-size:1.15rem}
+  .heart.on{color:var(--c0)}
+
+  .boardwrap{flex:1; display:flex; flex-direction:column; gap:8px; min-height:0}
+  .board{flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:minmax(64px,1fr); gap:10px; min-height:0}
+  .tile{border:0; border-radius:18px; font-family:inherit; font-weight:900; font-size:clamp(2.1rem,11vw,3.4rem);
+        color:var(--ink); background:var(--card); cursor:pointer; display:flex; align-items:center; justify-content:center;
+        box-shadow:0 5px 0 rgba(0,0,0,.3); transition:transform .08s, box-shadow .08s, background .15s; position:relative}
+  .tile::after{content:""; position:absolute; inset:0; border-radius:18px; box-shadow:0 0 0 3px var(--tc,transparent) inset; opacity:.5}
+  .tile:not(:disabled):active{transform:translateY(4px); box-shadow:0 1px 0 rgba(0,0,0,.3)}
+  .tile.sel{transform:scale(1.04); box-shadow:0 8px 0 rgba(0,0,0,.35), 0 0 24px rgba(255,255,255,.25)}
+  .tile.sel::after{box-shadow:0 0 0 3px rgba(255,255,255,.85) inset; opacity:1}
+  .tile.used{opacity:.32; text-decoration:line-through; color:var(--muted); box-shadow:none; cursor:not-allowed}
+  .tile.used::after{display:none}
+  .more{display:flex; align-items:center; justify-content:center; gap:10px; background:rgba(255,255,255,.08);
+        border:0; border-radius:14px; color:var(--ink); font-family:inherit; font-weight:800; font-size:1rem; padding:13px; cursor:pointer}
+  .more:active{transform:scale(.97)}
+  .more .pg{color:var(--muted); font-weight:800}
+
+  .timer{display:flex; align-items:baseline; justify-content:center; gap:8px; font-variant-numeric:tabular-nums}
+  .timer .num{font-weight:900; font-size:2.4rem; line-height:1}
+  .timer .lbl{color:var(--muted); font-weight:800}
+  .bar{height:14px; border-radius:999px; background:rgba(255,255,255,.1); overflow:hidden}
+  .bar > i{display:block; height:100%; width:100%; border-radius:999px; background:linear-gradient(90deg,#33d27a,#29c26b); transition:background .2s}
+  .urgent .timer .num{color:var(--c0); animation:beat .5s infinite}
+  .urgent .bar > i{background:linear-gradient(90deg,#ff8a2e,var(--c0))}
+  @keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+
+  /* BOTÓN BASTA */
+  .bastawrap{display:flex; justify-content:center; padding-top:2px}
+  .basta{position:relative; width:min(44vw,180px); height:min(44vw,180px); border-radius:50%; border:0; cursor:pointer;
+         background:radial-gradient(circle at 50% 34%, #322e4d, #1b1830);
+         box-shadow:0 12px 0 #0d0b16, 0 20px 30px rgba(0,0,0,.55), inset 0 4px 10px rgba(255,255,255,.10);
+         display:flex; align-items:center; justify-content:center; transition:transform .07s, box-shadow .07s, filter .2s}
+  .basta::before{content:""; position:absolute; inset:-7px; border-radius:50%; z-index:-1;
+         background:conic-gradient(var(--c0),var(--c4),var(--c2),var(--c3),var(--c1),var(--c5),var(--c0))}
+  .basta .word{display:flex; font-weight:900; font-size:min(12.5vw,52px); letter-spacing:1px}
+  .basta .word i{font-style:normal; filter:drop-shadow(0 3px 0 rgba(0,0,0,.4))}
+  .basta:not(:disabled):active{transform:translateY(10px); box-shadow:0 2px 0 #0d0b16, 0 6px 12px rgba(0,0,0,.55), inset 0 4px 10px rgba(255,255,255,.10)}
+  .basta:disabled{filter:grayscale(.7) brightness(.7); cursor:not-allowed}
+  .basta.ready{animation:bpulse 1.3s ease-in-out infinite}
+  @keyframes bpulse{0%,100%{box-shadow:0 12px 0 #0d0b16,0 20px 30px rgba(0,0,0,.55)}50%{box-shadow:0 12px 0 #0d0b16,0 22px 46px rgba(255,255,255,.22)}}
+
+  /* OVERLAYS */
+  .overlay{position:absolute; inset:0; background:rgba(10,8,18,.8); backdrop-filter:blur(6px);
+           display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; padding:24px; z-index:30; animation:fade .2s}
+  .overlay.active{display:flex}
+  .overlay .panel{width:100%; max-width:420px; display:flex; flex-direction:column; gap:12px}
+  .bigemoji{font-size:5rem; animation:pop .4s cubic-bezier(.2,1.4,.4,1)}
+  #roundEnd .card2{background:var(--card); border-radius:var(--r); padding:22px; text-align:center; width:100%; max-width:420px}
+  #roundEnd .who{font-size:1.8rem; font-weight:900; color:var(--c0); margin:4px 0 2px}
+  .stat-row{display:flex; justify-content:space-between; padding:12px 4px; border-bottom:1px solid rgba(255,255,255,.08); font-weight:700}
+  .stat-row b{font-size:1.2rem}
+  .shake{animation:shake .5s}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-12px)}40%{transform:translateX(12px)}60%{transform:translateX(-8px)}80%{transform:translateX(8px)}}
+
+  .confetti{position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:40}
+  .confetti i{position:absolute; top:-20px; width:12px; height:12px; border-radius:3px; animation:fall 1.1s ease-in forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(540deg); opacity:0}}
+
+  .setting{background:var(--card); border-radius:var(--rs); padding:16px}
+  .setting .lab{font-weight:800; margin-bottom:12px; font-size:1.1rem}
+  .seg{display:flex; gap:8px; flex-wrap:wrap}
+  .seg button{flex:1; min-width:84px; border:0; border-radius:12px; padding:14px 8px; font-weight:800; font-family:inherit;
+              background:rgba(255,255,255,.08); color:var(--ink); font-size:1rem; cursor:pointer}
+  .seg button.sel{background:var(--c1); box-shadow:0 0 0 2px rgba(255,255,255,.3) inset}
+  .stepper{display:flex; align-items:center; gap:14px; justify-content:space-between}
+  .stepper .v{font-size:2rem; font-weight:900; min-width:90px; text-align:center; font-variant-numeric:tabular-nums}
+  .stepper .icobtn{background:var(--c1)}
+  .toggle{display:flex; align-items:center; justify-content:space-between}
+  .sw{width:64px; height:36px; border-radius:999px; background:rgba(255,255,255,.15); position:relative; transition:.2s}
+  .sw::after{content:""; position:absolute; top:3px; left:3px; width:30px; height:30px; border-radius:50%; background:#fff; transition:.2s}
+  .sw.on{background:var(--ok)} .sw.on::after{left:31px}
+
+  .help-step{background:var(--card); border-radius:var(--rs); padding:16px; display:flex; gap:14px; align-items:flex-start}
+  .help-step .n{flex:0 0 auto; width:38px; height:38px; border-radius:50%; background:var(--c4); display:flex; align-items:center; justify-content:center; font-weight:900}
+  .help-step p{line-height:1.35; font-weight:600}
+  .credits{text-align:center; gap:8px}
+  .credits .logo{justify-content:center; font-size:clamp(40px,12vw,80px)}
+  .muted{color:var(--muted)} .center{text-align:center}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001s !important}
+    .urgent .timer .num,.basta.ready{animation:none !important}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH -->
+  <section id="splash" class="screen active">
+    <div class="logo"><span>B</span><span>A</span><span>S</span><span>T</span><span>A</span></div>
+    <div class="tag">El juego de letras más rápido de la mesa</div>
+  </section>
+
+  <!-- HOME -->
+  <section id="home" class="screen">
+    <div class="logo"><span>B</span><span>A</span><span>S</span><span>T</span><span>A</span></div>
+    <div class="tag">¡Tema, letra y a correr!</div>
+    <button class="btn play big" data-go="play">▶ JUGAR</button>
+    <div class="menu-grid">
+      <button class="btn ghost" data-go="settings"><span class="ico">⚙️</span>Ajustes</button>
+      <button class="btn ghost" data-go="stats"><span class="ico">📊</span>Récords</button>
+      <button class="btn ghost" data-go="help"><span class="ico">❓</span>Cómo se juega</button>
+      <button class="btn ghost" data-go="credits"><span class="ico">⭐</span>Créditos</button>
+    </div>
+  </section>
+
+  <!-- JUGADORES -->
+  <section id="players" class="screen">
+    <div class="top"><button class="icobtn" data-go="home">←</button><h2>¿Quién juega?</h2></div>
+    <div class="scroll">
+      <div class="hint">De 2 a 6 jugadores. Toca un nombre para cambiarlo.</div>
+      <div id="playerList" style="display:flex; flex-direction:column; gap:10px"></div>
+      <button class="btn ghost" id="addPlayer">➕ Agregar jugador</button>
+    </div>
+    <button class="btn play big" id="startGameBtn">▶ EMPEZAR</button>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="game" class="screen">
+    <div class="ghead">
+      <span class="pill" id="pRound">Ronda 1</span>
+      <span class="grow"></span>
+      <button class="icobtn" id="btnPause" aria-label="Pausa">⏸</button>
+    </div>
+
+    <div class="turnbar">
+      <div class="who"><small>LE TOCA A</small><span id="playerName">—</span></div>
+      <div class="selBadge" id="selBadge"></div>
+    </div>
+
+    <div class="themebar">
+      <div class="t" id="themeText">Tema</div>
+      <button class="icobtn mini heart" id="btnFav" aria-label="Favorito">♡</button>
+      <button class="icobtn mini" id="btnReroll" aria-label="Cambiar tema">🔄</button>
+    </div>
+
+    <div class="boardwrap">
+      <div class="board" id="board"></div>
+      <button class="more" id="btnMore">⋯ Más letras <span class="pg" id="pageInd">1/3</span></button>
+    </div>
+
+    <div class="timer"><span class="num" id="tNum">15</span><span class="lbl">seg</span></div>
+    <div class="bar"><i id="tBar"></i></div>
+
+    <div class="bastawrap">
+      <button class="basta" id="btnBasta" disabled aria-label="Basta">
+        <span class="word"><i style="color:var(--c0)">B</i><i style="color:var(--c2)">A</i><i style="color:var(--c3)">S</i><i style="color:var(--c1)">T</i><i style="color:var(--c5)">A</i></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="settings" class="screen">
+    <div class="top"><button class="icobtn" data-go="home">←</button><h2>Ajustes</h2></div>
+    <div class="scroll">
+      <div class="setting">
+        <div class="lab">⏱️ Duración del turno</div>
+        <div class="stepper">
+          <button class="icobtn" id="secMinus">−</button>
+          <div class="v"><span id="secVal">15</span>s</div>
+          <button class="icobtn" id="secPlus">+</button>
+        </div>
+      </div>
+      <div class="setting">
+        <div class="lab">👥 Modo</div>
+        <div class="seg" id="segModo">
+          <button data-v="familiar">Familiar</button>
+          <button data-v="fiesta">Fiesta</button>
+          <button data-v="ninos">Niños</button>
+        </div>
+      </div>
+      <div class="setting">
+        <div class="lab">🎯 Dificultad</div>
+        <div class="seg" id="segDif">
+          <button data-v="todas">Todas</button>
+          <button data-v="facil">Fácil</button>
+          <button data-v="medio">Media</button>
+          <button data-v="dificil">Difícil</button>
+        </div>
+      </div>
+      <div class="setting toggle"><span class="lab" style="margin:0">🔊 Sonido</span><div class="sw" id="swSound"></div></div>
+      <div class="setting toggle"><span class="lab" style="margin:0">📳 Vibración</span><div class="sw" id="swVib"></div></div>
+      <div class="setting toggle"><span class="lab" style="margin:0">❤️ Solo favoritos</span><div class="sw" id="swFav"></div></div>
+      <button class="btn ghost" id="btnResetCfg">Restablecer ajustes</button>
+    </div>
+  </section>
+
+  <!-- ESTADÍSTICAS -->
+  <section id="stats" class="screen">
+    <div class="top"><button class="icobtn" data-go="home">←</button><h2>Récords</h2></div>
+    <div class="scroll">
+      <div class="setting">
+        <div class="stat-row"><span>🏆 Mejor racha</span><b id="sBest">0</b></div>
+        <div class="stat-row"><span>🎮 Partidas jugadas</span><b id="sGames">0</b></div>
+        <div class="stat-row"><span>🔁 Rondas jugadas</span><b id="sRounds">0</b></div>
+        <div class="stat-row"><span>✅ Aciertos</span><b id="sOk">0</b></div>
+        <div class="stat-row"><span>⏰ Veces que se acabó el tiempo</span><b id="sFail">0</b></div>
+        <div class="stat-row"><span>🌀 Alfabetos completados</span><b id="sLaps">0</b></div>
+        <div class="stat-row" style="border:0"><span>❤️ Temas favoritos</span><b id="sFav">0</b></div>
+      </div>
+      <button class="btn ghost" id="btnResetStats">Borrar récords</button>
+    </div>
+  </section>
+
+  <!-- AYUDA -->
+  <section id="help" class="screen">
+    <div class="top"><button class="icobtn" data-go="home">←</button><h2>Cómo se juega</h2></div>
+    <div class="scroll">
+      <div class="help-step"><div class="n">1</div><p>Aparece el <b>tema</b> y se anuncia <b>a quién le toca</b> (al azar, sin repetir hasta que todos jueguen).</p></div>
+      <div class="help-step"><div class="n">2</div><p>Toca una <b>letra</b> del tablero (incluida la Ñ). Si no caben todas, usa <b>Más letras</b>. Solo puedes tener una activa.</p></div>
+      <div class="help-step"><div class="n">3</div><p>Di en voz alta una palabra del tema que empiece por esa letra y pulsa el botón <b>BASTA</b> antes de que se acabe el tiempo.</p></div>
+      <div class="help-step"><div class="n">4</div><p>La letra queda <b>bloqueada</b>, se reinicia el tiempo y le toca al <b>siguiente jugador</b>.</p></div>
+      <div class="help-step"><div class="n">5</div><p>Si no pulsas BASTA a tiempo, <b>pierdes</b>. Si se usan las 27 letras y nadie perdió, empieza una <b>segunda ronda</b> con el mismo tema.</p></div>
+    </div>
+  </section>
+
+  <!-- CRÉDITOS -->
+  <section id="credits" class="screen">
+    <div class="top"><button class="icobtn" data-go="home">←</button><h2>Créditos</h2></div>
+    <div class="scroll credits">
+      <div class="logo"><span>B</span><span>A</span><span>S</span><span>T</span><span>A</span></div>
+      <p class="muted">Juego social de letras para reuniones, fiestas y salones de clase.</p>
+      <div class="setting center">
+        <p style="font-weight:800; margin-bottom:8px">Hecho con 💛 para jugar sin internet</p>
+        <p class="muted">Diseño UX/UI · Game Design · Sonido sintetizado en vivo</p>
+        <p class="muted">338 temas listos para sorprender</p>
+        <p class="muted" style="margin-top:10px">Versión 2.0 · PWA instalable</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAUSA -->
+  <div class="overlay" id="ovPause">
+    <div class="bigemoji">⏸️</div>
+    <div class="panel">
+      <button class="btn big play" id="resumeBtn">▶ Reanudar</button>
+      <button class="btn ghost" data-go="settings">⚙️ Ajustes</button>
+      <button class="btn ghost" id="quitBtn">🚪 Salir al menú</button>
+    </div>
+  </div>
+
+  <!-- FIN DE RONDA -->
+  <section id="roundEnd" class="overlay">
+    <div class="bigemoji">⏰</div>
+    <div class="card2">
+      <div style="font-weight:900; font-size:1.4rem">¡Se acabó el tiempo!</div>
+      <div class="who" id="endWho">—</div>
+      <div class="muted" id="endTheme">Tema</div>
+      <div class="stat-row" style="margin-top:10px"><span>Racha de esta ronda</span><b id="endStreak">0</b></div>
+      <div class="stat-row" style="border:0"><span>Mejor racha</span><b id="endBest">0</b></div>
+    </div>
+    <div class="panel">
+      <button class="btn big play" id="againBtn">🔁 Seguir jugando</button>
+      <button class="btn ghost" id="endQuit">🚪 Menú</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ====== TEMAS EMBEBIDOS (edita aquí) ====== */
+window.TEMAS = [
+  // ---- Lugares: "Cosas que encuentras en..." ----
+  ["Cosas que encuentras en un supermercado", "facil familiar ninos"],
+  ["Cosas que encuentras en una mochila escolar", "facil familiar ninos"],
+  ["Cosas que encuentras debajo de una cama", "medio familiar fiesta"],
+  ["Cosas que encontrarías en una isla desierta", "medio creativo fiesta"],
+  ["Cosas que hay en una cocina", "facil familiar ninos"],
+  ["Cosas que hay en un baño", "facil familiar ninos"],
+  ["Cosas que hay en una nevera", "facil familiar ninos"],
+  ["Cosas que hay en un hospital", "medio familiar"],
+  ["Cosas que hay en un parque", "facil familiar ninos"],
+  ["Cosas que hay en la playa", "facil familiar ninos"],
+  ["Cosas que hay en el espacio", "medio creativo ninos"],
+  ["Cosas que hay en una cárcel", "medio fiesta"],
+  ["Cosas que hay en un circo", "medio familiar ninos"],
+  ["Cosas que hay en una boda", "medio familiar fiesta"],
+  ["Cosas que hay en un aeropuerto", "medio familiar"],
+  ["Cosas que hay en un zoológico", "facil familiar ninos"],
+  ["Cosas que hay en una biblioteca", "medio familiar ninos"],
+  ["Cosas que hay en un gimnasio", "medio familiar"],
+  ["Cosas que hay en una peluquería", "medio familiar"],
+  ["Cosas que hay en la selva", "medio familiar ninos"],
+  ["Cosas que hay en un castillo", "medio creativo ninos"],
+  ["Cosas que hay en un barco pirata", "medio creativo fiesta ninos"],
+  ["Cosas que hay en el desierto", "medio familiar"],
+  ["Cosas que hay en una cueva", "medio creativo"],
+  ["Cosas que hay en un estadio", "facil familiar fiesta"],
+  ["Cosas que hay en una nave espacial", "dificil creativo"],
+  ["Cosas que hay en un laboratorio", "medio creativo"],
+  ["Cosas que hay en una granja", "facil familiar ninos"],
+  ["Cosas que hay en una juguetería", "facil familiar ninos"],
+  ["Cosas que hay en un museo", "medio familiar"],
+  ["Cosas que hay en una ferretería", "dificil"],
+  ["Cosas que hay en una tienda de barrio", "medio familiar fiesta"],
+  ["Cosas que hay en un colegio", "facil familiar ninos"],
+  ["Cosas que hay en un closet", "medio familiar"],
+  ["Cosas que hay en un cajón de la cocina", "medio fiesta"],
+  ["Cosas que hay en el fondo de un bolso", "medio fiesta"],
+  ["Cosas que hay en un botiquín", "medio familiar"],
+  ["Cosas que hay en una caja de herramientas", "dificil"],
+  ["Cosas que hay en una fiesta de cumpleaños", "facil familiar fiesta ninos"],
+  ["Cosas que hay en un cine", "facil familiar ninos"],
+  ["Cosas que hay en un restaurante", "facil familiar"],
+  ["Cosas que hay en una panadería", "facil familiar ninos"],
+
+  // ---- Propiedades: "Cosas que son..." ----
+  ["Cosas muy pequeñas", "facil familiar ninos"],
+  ["Cosas muy grandes", "facil familiar ninos"],
+  ["Cosas pegajosas", "medio fiesta ninos"],
+  ["Cosas que huelen mal", "medio fiesta ninos"],
+  ["Cosas que dan miedo", "medio familiar fiesta"],
+  ["Cosas que pican", "medio familiar"],
+  ["Cosas suaves", "facil familiar ninos"],
+  ["Cosas frías", "facil familiar ninos"],
+  ["Cosas calientes", "facil familiar ninos"],
+  ["Cosas brillantes", "medio familiar"],
+  ["Cosas ruidosas", "facil familiar ninos"],
+  ["Cosas silenciosas", "medio creativo"],
+  ["Cosas peligrosas", "medio familiar"],
+  ["Cosas inútiles", "medio fiesta creativo"],
+  ["Cosas caras", "facil familiar"],
+  ["Cosas baratas", "facil familiar"],
+  ["Cosas frágiles", "medio familiar"],
+  ["Cosas pesadas", "medio familiar"],
+  ["Cosas ligeras", "medio familiar"],
+  ["Cosas redondas", "facil familiar ninos"],
+  ["Cosas que rebotan", "medio familiar ninos"],
+  ["Cosas que flotan", "medio familiar ninos"],
+  ["Cosas que se derriten", "medio familiar ninos"],
+  ["Cosas que explotan", "medio fiesta"],
+  ["Cosas transparentes", "medio creativo"],
+  ["Cosas que brillan en la oscuridad", "medio creativo ninos"],
+  ["Cosas que se rompen fácilmente", "medio familiar"],
+  ["Cosas que nunca se acaban", "dificil creativo"],
+  ["Cosas que parecen caras pero no lo son", "dificil creativo fiesta"],
+  ["Cosas elásticas", "dificil creativo"],
+  ["Cosas que giran", "medio familiar ninos"],
+  ["Cosas afiladas", "medio familiar"],
+  ["Cosas que se pegan a la ropa", "dificil fiesta"],
+  ["Cosas que dan asco", "medio fiesta"],
+  ["Cosas adictivas", "medio fiesta adultos"],
+
+  // ---- Situaciones / divertidas: "Cosas que..." ----
+  ["Cosas que ocultarías de tu mamá", "medio fiesta adultos"],
+  ["Cosas que nunca prestarías", "medio fiesta"],
+  ["Cosas que gritarías en un estadio", "medio fiesta"],
+  ["Cosas que jamás dirías en una entrevista de trabajo", "dificil fiesta adultos"],
+  ["Cosas que harías en una película de acción", "medio creativo fiesta"],
+  ["Cosas que no deberían estar en una pizza", "medio fiesta ninos"],
+  ["Cosas que un extraterrestre no entendería", "dificil creativo fiesta"],
+  ["Cosas que harían sospechoso a un vecino", "dificil fiesta adultos"],
+  ["Cosas que sobreviven a un apocalipsis", "dificil creativo fiesta"],
+  ["Cosas absurdas para llevar a una cita", "medio fiesta adultos"],
+  ["Cosas que harías si fueras invisible", "medio creativo fiesta adultos"],
+  ["Cosas que harías si fueras presidente", "medio creativo fiesta"],
+  ["Cosas que harías si ganaras la lotería", "medio fiesta"],
+  ["Cosas que dirías para terminar una relación", "dificil fiesta adultos"],
+  ["Cosas que harías en un ascensor atascado", "medio fiesta"],
+  ["Cosas que llevarías a una isla desierta", "medio fiesta"],
+  ["Cosas que harías un domingo de lluvia", "facil familiar"],
+  ["Cosas que te dan pereza hacer", "medio fiesta"],
+  ["Cosas que todos hemos hecho y nadie admite", "dificil fiesta adultos"],
+  ["Cosas que dan vergüenza ajena", "medio fiesta adultos"],
+  ["Cosas que harías para impresionar a alguien", "medio fiesta adultos"],
+  ["Cosas que dirías a un robot", "medio creativo fiesta"],
+  ["Cosas que pasan en una telenovela", "dificil fiesta adultos"],
+  ["Cosas que un niño preguntaría sin parar", "medio familiar fiesta"],
+  ["Cosas que solo entiende tu familia", "dificil fiesta"],
+  ["Cosas que harías antes de morir", "dificil creativo adultos"],
+  ["Cosas que dan risa aunque no deberían", "medio fiesta adultos"],
+  ["Cosas que romperías si tuvieras superfuerza", "medio creativo fiesta"],
+  ["Cosas que comprarías con un millón de pesos", "medio fiesta"],
+  ["Cosas que esconderías antes de que llegue una visita", "dificil fiesta adultos"],
+  ["Cosas que harías mejor que tu jefe", "dificil fiesta adultos"],
+  ["Cosas que dices cuando te duele algo", "medio fiesta"],
+  ["Cosas que harías si el tiempo se detuviera", "dificil creativo"],
+
+  // ---- Excusas ----
+  ["Excusas para llegar tarde", "medio fiesta"],
+  ["Excusas para no ir al trabajo", "medio fiesta adultos"],
+  ["Excusas para no ir a clase", "medio fiesta"],
+  ["Excusas para no pagar la cuenta", "dificil fiesta adultos"],
+  ["Excusas para no contestar el teléfono", "medio fiesta adultos"],
+  ["Excusas para salir temprano de una fiesta", "medio fiesta adultos"],
+  ["Excusas para no hacer la tarea", "medio fiesta ninos"],
+  ["Excusas para no ir al gimnasio", "medio fiesta adultos"],
+
+  // ---- Comida y bebida ----
+  ["Comidas", "facil familiar ninos"],
+  ["Postres", "facil familiar ninos"],
+  ["Frutas", "facil familiar ninos"],
+  ["Verduras", "facil familiar ninos"],
+  ["Comida chatarra", "facil familiar fiesta"],
+  ["Bebidas", "facil familiar"],
+  ["Comida picante", "medio familiar"],
+  ["Sopas", "medio familiar"],
+  ["Desayunos", "facil familiar ninos"],
+  ["Comida callejera", "medio familiar fiesta"],
+  ["Dulces y golosinas", "facil familiar ninos"],
+  ["Salsas y aderezos", "dificil"],
+  ["Comida que se come con la mano", "medio familiar ninos"],
+  ["Comida que odiabas de niño", "medio fiesta"],
+  ["Platos típicos de Colombia", "medio familiar fiesta"],
+  ["Frutas tropicales", "medio familiar ninos"],
+  ["Cosas que se untan en el pan", "medio familiar ninos"],
+  ["Comidas que manchan la ropa", "dificil fiesta"],
+  ["Antojos de medianoche", "medio fiesta adultos"],
+  ["Comidas que se sirven frías", "dificil"],
+  ["Ingredientes de una ensalada", "medio familiar"],
+  ["Cosas que pides en una pizzería", "facil familiar ninos"],
+
+  // ---- Animales ----
+  ["Animales", "facil familiar ninos"],
+  ["Animales peligrosos", "medio familiar ninos"],
+  ["Animales lindos", "facil familiar ninos"],
+  ["Insectos", "medio familiar ninos"],
+  ["Animales del mar", "facil familiar ninos"],
+  ["Animales de la granja", "facil familiar ninos"],
+  ["Animales que vuelan", "medio familiar ninos"],
+  ["Animales en peligro de extinción", "dificil familiar"],
+  ["Dinosaurios", "medio familiar ninos"],
+  ["Mascotas raras", "dificil creativo fiesta"],
+  ["Animales de la selva", "facil familiar ninos"],
+  ["Animales que dan miedo", "medio familiar fiesta"],
+  ["Animales lentos", "dificil familiar"],
+  ["Animales rápidos", "medio familiar ninos"],
+  ["Animales con cuernos", "dificil familiar"],
+  ["Sonidos de animales", "facil familiar ninos"],
+
+  // ---- Personas / personajes ----
+  ["Superhéroes", "medio familiar fiesta ninos"],
+  ["Villanos", "medio familiar fiesta"],
+  ["Personajes de caricaturas", "facil familiar ninos"],
+  ["Profesiones", "facil familiar ninos"],
+  ["Profesiones raras", "dificil creativo fiesta"],
+  ["Personajes históricos", "dificil"],
+  ["Personajes de cuentos de hadas", "medio familiar ninos"],
+  ["Reyes, reinas y princesas", "medio familiar ninos"],
+  ["Personajes de películas", "medio familiar fiesta"],
+  ["Famosos que todos conocen", "medio fiesta"],
+  ["Personajes de videojuegos", "medio fiesta ninos"],
+  ["Tipos de jefe que has tenido", "dificil fiesta adultos"],
+  ["Apodos cariñosos", "medio fiesta adultos"],
+  ["Tipos de vecino", "dificil fiesta adultos"],
+
+  // ---- Pop / cultura / tecnología ----
+  ["Películas", "facil familiar fiesta"],
+  ["Canciones famosas", "medio fiesta"],
+  ["Programas de televisión", "medio familiar fiesta"],
+  ["Videojuegos", "medio fiesta ninos"],
+  ["Aplicaciones del celular", "medio fiesta"],
+  ["Marcas famosas", "medio fiesta"],
+  ["Redes sociales", "facil fiesta"],
+  ["Cosas que ves en internet", "medio fiesta adultos"],
+  ["Series que todos vieron", "medio fiesta"],
+  ["Instrumentos musicales", "medio familiar ninos"],
+  ["Géneros de música", "medio fiesta"],
+  ["Cosas que se vuelven virales", "dificil fiesta adultos"],
+  ["Emojis que usas todo el tiempo", "medio fiesta"],
+
+  // ---- Viajes / mundo ----
+  ["Países", "medio familiar"],
+  ["Ciudades del mundo", "dificil"],
+  ["Capitales", "dificil"],
+  ["Idiomas", "dificil"],
+  ["Monumentos famosos", "dificil"],
+  ["Medios de transporte", "facil familiar ninos"],
+  ["Departamentos de Colombia", "dificil"],
+  ["Lugares para ir de vacaciones", "medio familiar"],
+  ["Cosas que empacas para un viaje", "medio familiar"],
+  ["Cosas que se te olvidan al viajar", "dificil fiesta"],
+
+  // ---- Naturaleza ----
+  ["Árboles y plantas", "medio familiar"],
+  ["Flores", "medio familiar"],
+  ["Fenómenos del clima", "medio familiar ninos"],
+  ["Planetas y astros", "medio familiar ninos"],
+  ["Piedras preciosas", "dificil"],
+  ["Ríos y mares", "dificil"],
+  ["Colores", "facil familiar ninos"],
+  ["Cosas que hay en el cielo", "facil familiar ninos"],
+  ["Cosas que hay bajo el agua", "medio familiar ninos"],
+
+  // ---- Colegio / oficina ----
+  ["Materias del colegio", "facil familiar ninos"],
+  ["Útiles escolares", "facil familiar ninos"],
+  ["Cosas de una oficina", "medio familiar"],
+  ["Cosas que hace un estudiante para no estudiar", "dificil fiesta"],
+  ["Cosas que dice un profesor", "medio fiesta"],
+  ["Reuniones que pudieron ser un correo", "dificil fiesta adultos"],
+
+  // ---- Casa / objetos ----
+  ["Electrodomésticos", "medio familiar"],
+  ["Muebles", "facil familiar ninos"],
+  ["Herramientas", "dificil familiar"],
+  ["Cosas que se enchufan", "medio familiar"],
+  ["Cosas que tienen botones", "medio familiar ninos"],
+  ["Cosas que se doblan", "dificil creativo"],
+  ["Cosas que se pierden en casa", "medio fiesta"],
+  ["Cosas que se prestan y nunca devuelven", "dificil fiesta adultos"],
+  ["Juguetes", "facil familiar ninos"],
+  ["Cosas que coleccionas", "medio familiar"],
+  ["Cosas que hay en el bolsillo", "medio fiesta"],
+  ["Cosas que recargas", "medio familiar"],
+
+  // ---- Cuerpo / salud ----
+  ["Partes del cuerpo", "facil familiar ninos"],
+  ["Cosas que hacen los dentistas", "medio familiar"],
+  ["Cosas que te dan sueño", "medio fiesta"],
+  ["Malos hábitos", "medio fiesta adultos"],
+  ["Cosas que te ponen nervioso", "medio fiesta adultos"],
+  ["Cosas que te hacen feliz", "facil familiar"],
+
+  // ---- Ropa / moda ----
+  ["Prendas de ropa", "facil familiar ninos"],
+  ["Accesorios de moda", "medio familiar"],
+  ["Tipos de zapatos", "medio familiar"],
+  ["Cosas que te pones en la cabeza", "medio familiar ninos"],
+  ["Disfraces de Halloween", "medio familiar fiesta ninos"],
+
+  // ---- Deporte / juego ----
+  ["Deportes", "facil familiar ninos"],
+  ["Equipos de fútbol", "medio fiesta"],
+  ["Juegos de mesa", "medio familiar ninos"],
+  ["Juegos de niños", "facil familiar ninos"],
+  ["Cosas que pasan en un partido de fútbol", "medio fiesta"],
+  ["Deportes extremos", "dificil fiesta"],
+
+  // ---- Tiempo / fechas ----
+  ["Cosas de Navidad", "facil familiar ninos"],
+  ["Cosas de un cumpleaños", "facil familiar fiesta ninos"],
+  ["Cosas de una fiesta de fin de año", "medio fiesta"],
+  ["Cosas del verano", "facil familiar ninos"],
+  ["Cosas que pasan en diciembre", "medio familiar fiesta"],
+  ["Tradiciones colombianas", "dificil familiar fiesta"],
+
+  // ---- Abstractas / creativas ----
+  ["Cosas invisibles", "dificil creativo"],
+  ["Cosas que no se pueden comprar con dinero", "dificil creativo"],
+  ["Sentimientos y emociones", "dificil familiar"],
+  ["Cosas que pasan en un sueño", "dificil creativo fiesta"],
+  ["Cosas que dan buena suerte", "medio familiar"],
+  ["Supersticiones", "dificil fiesta"],
+  ["Cosas que harías en otra vida", "dificil creativo adultos"],
+  ["Inventos que faltan en el mundo", "dificil creativo fiesta"],
+  ["Cosas que serían mejores si volaran", "dificil creativo fiesta"],
+  ["Cosas que un superhéroe no haría", "dificil creativo fiesta"],
+  ["Excusas de un mago para no hacer magia", "dificil creativo fiesta"],
+  ["Cosas que diría una abuela", "medio fiesta"],
+  ["Refranes y dichos", "dificil fiesta"],
+  ["Cosas que pasan solo en las películas", "dificil fiesta"],
+  ["Reglas que nadie sigue", "dificil fiesta adultos"],
+  ["Cosas que suenan ricas pero no lo son", "dificil creativo fiesta"],
+
+  // ---- Más "encuentras / hay en" para variar ----
+  ["Cosas que hay en un cajón de medias", "dificil fiesta"],
+  ["Cosas que hay debajo del sofá", "medio fiesta"],
+  ["Cosas que hay en una mesa de noche", "medio familiar"],
+  ["Cosas que hay en un picnic", "medio familiar ninos"],
+  ["Cosas que hay en una pecera", "medio familiar ninos"],
+  ["Cosas que hay en un parque de diversiones", "facil familiar fiesta ninos"],
+  ["Cosas que hay en un consultorio médico", "medio familiar"],
+  ["Cosas que hay en una nave pirata espacial", "dificil creativo fiesta"],
+  ["Cosas que hay en el bolso de mamá", "medio fiesta"],
+  ["Cosas que hay en la guantera del carro", "dificil fiesta"],
+  ["Cosas que hay en una caja de regalos", "facil familiar ninos"],
+  ["Cosas que hay en un mercado campesino", "medio familiar"],
+  ["Cosas que hay en una estación de bomberos", "medio familiar ninos"],
+  ["Cosas que hay en un taller mecánico", "dificil"],
+  ["Cosas que hay en un salón de belleza", "medio fiesta"],
+
+  // ---- Acciones / verbos ----
+  ["Cosas que puedes hacer con las manos", "medio familiar ninos"],
+  ["Cosas que haces antes de dormir", "medio familiar"],
+  ["Cosas que haces al despertar", "medio familiar"],
+  ["Cosas que haces cuando estás aburrido", "medio fiesta"],
+  ["Cosas que haces cuando llueve", "facil familiar"],
+  ["Cosas que se pueden lanzar", "medio fiesta ninos"],
+  ["Cosas que se pueden coleccionar", "medio familiar"],
+  ["Cosas que se hacen en grupo", "medio fiesta"],
+  ["Cosas que se hacen en silencio", "dificil creativo"],
+  ["Cosas que se hacen a escondidas", "dificil fiesta adultos"],
+
+  // ---- Sonido / luz / sentidos ----
+  ["Cosas que hacen ruido en la noche", "medio fiesta"],
+  ["Cosas que iluminan", "medio familiar ninos"],
+  ["Cosas que huelen rico", "medio familiar ninos"],
+  ["Cosas que saben dulce", "facil familiar ninos"],
+  ["Cosas que saben amargas", "dificil familiar"],
+  ["Cosas suaves al tacto", "medio familiar ninos"],
+
+  // ---- Fiesta / adultos (suaves) ----
+  ["Cosas que pasan en una fiesta", "medio fiesta adultos"],
+  ["Cosas que dices después de medianoche", "dificil fiesta adultos"],
+  ["Cosas que arruinan una cita", "dificil fiesta adultos"],
+  ["Cosas que no debes decirle a tu suegra", "dificil fiesta adultos"],
+  ["Cosas que haces cuando nadie te ve", "dificil fiesta adultos"],
+  ["Planes de un viernes en la noche", "medio fiesta adultos"],
+  ["Cosas que se compran a último momento", "medio fiesta"],
+  ["Cosas que prometes y nunca cumples", "dificil fiesta adultos"],
+
+  // ---- Niños extra ----
+  ["Cosas de un parque infantil", "facil familiar ninos"],
+  ["Personajes de Disney", "medio familiar ninos"],
+  ["Cosas que dibujarías", "facil familiar ninos"],
+  ["Cosas que tienen ruedas", "facil familiar ninos"],
+  ["Cosas que vuelan en el cielo", "facil familiar ninos"],
+  ["Cosas que hacen los bebés", "medio familiar ninos"],
+  ["Animales de un cuento", "medio familiar ninos"],
+  ["Cosas que brillan", "facil familiar ninos"],
+  ["Cosas que se mueven solas", "medio creativo ninos"],
+  ["Cosas que caben en una mano", "facil familiar ninos"],
+  ["Cosas que hay en un acuario", "medio familiar ninos"],
+  ["Cosas de un castillo de princesas", "medio familiar ninos"],
+  ["Cosas que se pueden inflar", "medio familiar ninos"],
+  ["Cosas que se mojan", "facil familiar ninos"],
+
+  // ---- Local Colombia (toque regional) ----
+  ["Palabras en jerga colombiana", "dificil fiesta adultos"],
+  ["Cosas típicas de una finca", "medio familiar"],
+  ["Bailes y ritmos latinos", "medio fiesta"],
+  ["Cosas que dice un costeño", "dificil fiesta"],
+  ["Cosas que se comen en una fonda", "medio familiar fiesta"],
+  ["Lugares para visitar en Colombia", "dificil familiar"],
+
+  // ---- Mezcla final creativa ----
+  ["Cosas que no deberían venderse en oferta", "dificil creativo fiesta"],
+  ["Cosas que un perro destruiría", "medio fiesta ninos"],
+  ["Cosas que tu gato tira al piso", "medio fiesta"],
+  ["Cosas que harías con un genio de la lámpara", "medio creativo fiesta"],
+  ["Cosas que llevarías a un viaje al pasado", "dificil creativo"],
+  ["Cosas que llevarías al futuro", "dificil creativo"],
+  ["Inventos inútiles pero divertidos", "dificil creativo fiesta"],
+  ["Cosas que harías si fueras gigante", "medio creativo fiesta ninos"],
+  ["Cosas que harías si fueras diminuto", "medio creativo fiesta ninos"],
+  ["Cosas que un pirata diría", "medio creativo fiesta ninos"],
+  ["Cosas que un robot del futuro tendría", "dificil creativo"],
+  ["Cosas que esconderías en una caja fuerte", "medio fiesta adultos"],
+  ["Cosas que te llevarías a una cápsula del tiempo", "dificil creativo"],
+  ["Cosas que harían enojar a un dragón", "medio creativo fiesta ninos"],
+  ["Trucos para parecer ocupado", "dificil fiesta adultos"],
+  ["Cosas que mejorarían con queso", "dificil fiesta"],
+  ["Cosas que serían geniales con ruedas", "dificil creativo fiesta"],
+  ["Cosas que un zombi buscaría", "medio creativo fiesta"],
+  ["Cosas que harías para no aburrirte en una fila", "medio fiesta"],
+  ["Cosas que dirías para sonar inteligente", "dificil fiesta adultos"]
+];
+
+</script>
+<script>
+/* ===================== LOCAL STORAGE ===================== */
+const STORE = {
+  load(k,d){ try{ const v=localStorage.getItem('basta_'+k); return v?JSON.parse(v):d }catch(e){ return d } },
+  save(k,v){ try{ localStorage.setItem('basta_'+k, JSON.stringify(v)) }catch(e){} }
+};
+const CFG_DEF = { segundos:15, modo:'familiar', dificultad:'todas', sonido:true, vibracion:true, soloFav:false };
+let cfg   = Object.assign({}, CFG_DEF, STORE.load('config', {}));
+let stats = Object.assign({ partidas:0, rondas:0, aciertos:0, fallos:0, mejorRacha:0, vueltas:0 }, STORE.load('stats', {}));
+let favoritos = STORE.load('favoritos', []);
+let historial = STORE.load('historial', []);
+let temasUsados = STORE.load('temasUsados', []);
+let players = STORE.load('jugadores', ['Jugador 1','Jugador 2']);
+if(!Array.isArray(players) || players.length<2) players=['Jugador 1','Jugador 2'];
+const saveCfg=()=>STORE.save('config',cfg);
+const saveStats=()=>STORE.save('stats',stats);
+
+/* ===================== DATOS ===================== */
+const ABC = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','Ñ','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+const PAL = ['var(--c0)','var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)'];
+const colorOf = L => PAL[ABC.indexOf(L)%6];
+const isDark  = L => ABC.indexOf(L)%6===2;
+const TEMAS = (window.TEMAS||[]).map(([t,tags])=>({t, tags:tags.split(' ')}));
+const PER_PAGE = 9;
+const totalPages = ()=>Math.ceil(ABC.length/PER_PAGE);
+
+/* ===================== AUDIO (Web Audio) ===================== */
+const Snd = (()=>{
+  let ctx, master, flip=false;
+  function ac(){
+    if(!ctx){ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return null;
+      ctx=new AC(); master=ctx.createGain(); master.gain.value=0.9; master.connect(ctx.destination); }
+    if(ctx.state==='suspended') ctx.resume();
+    return ctx;
+  }
+  const on = ()=>cfg.sonido && ac();
+  function tone(f,t0,dur,type='sine',vol=.4,glide=null){
+    const o=ctx.createOscillator(), g=ctx.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t0);
+    if(glide) o.frequency.exponentialRampToValueAtTime(glide,t0+dur);
+    g.gain.setValueAtTime(.0001,t0); g.gain.exponentialRampToValueAtTime(vol,t0+.012);
+    g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    o.connect(g).connect(master); o.start(t0); o.stop(t0+dur+.03);
+  }
+  function noise(t0,dur,vol=.25,cut=1800){
+    const n=ctx.createBufferSource(), buf=ctx.createBuffer(1,Math.max(1,ctx.sampleRate*dur),ctx.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+    n.buffer=buf; const g=ctx.createGain(); g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    const f=ctx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=cut;
+    n.connect(f).connect(g).connect(master); n.start(t0); n.stop(t0+dur);
+  }
+  return {
+    unlock(){ ac(); },
+    pick(){ if(!on())return; const t=ctx.currentTime; tone(660,t,.08,'triangle',.3); }, // toque al elegir letra
+    tick(){ if(!on())return; const t=ctx.currentTime; flip=!flip; tone(flip?1100:850,t,.05,'square',.16); },
+    tickUrgent(){ if(!on())return; const t=ctx.currentTime; tone(1550,t,.06,'square',.28); tone(1550,t+.09,.05,'square',.18); },
+    correct(){ if(!on())return; const t=ctx.currentTime; [523,659,784,1047].forEach((f,i)=>tone(f,t+i*.075,.2,'triangle',.4)); },
+    fail(){ if(!on())return; const t=ctx.currentTime;
+      [[392,.18],[349,.18],[311,.22],[233,.55]].forEach(([f,d],i)=>{ const st=t+i*.16; tone(f,st,d,'sawtooth',.34,f*0.94); });
+      noise(t+.64,.18,.18,1200);
+    },
+    roundStart(){ if(!on())return; const t=ctx.currentTime; [392,523,659,880].forEach((f,i)=>tone(f,t+i*.08,.22,'triangle',.34)); },
+  };
+})();
+const vibrate = p => { if(cfg.vibracion && navigator.vibrate) try{ navigator.vibrate(p) }catch(e){} };
+
+/* ===================== NAVEGACIÓN ===================== */
+const screens = {};
+document.querySelectorAll('.screen, .overlay').forEach(s=>screens[s.id]=s);
+let prevScreen='home';
+function show(id){
+  if(screens[id]?.classList.contains('overlay')){ screens[id].classList.add('active'); return; }
+  Object.values(screens).forEach(s=>{ if(!s.classList.contains('overlay')) s.classList.remove('active'); });
+  screens[id].classList.add('active');
+}
+function activeId(){ return Object.values(screens).find(s=>s.classList.contains('active')&&!s.classList.contains('overlay'))?.id||'home'; }
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  const dst=b.dataset.go;
+  if(dst==='play'){ Snd.unlock(); renderPlayers(); show('players'); }
+  else if(dst==='settings'){ prevScreen=activeId(); ovPause.classList.remove('active'); renderSettings(); show('settings'); }
+  else if(dst==='stats'){ renderStats(); show('stats'); }
+  else show(dst);
+}));
+screens.settings.querySelector('[data-go="home"]').addEventListener('click',()=>{
+  if(prevScreen==='game' && g.tema){ show('game'); ovPause.classList.add('active'); }
+  else show('home');
+});
+
+/* ===================== JUGADORES (setup) ===================== */
+const $=s=>document.querySelector(s);
+function renderPlayers(){
+  const list=$('#playerList'); list.innerHTML='';
+  players.forEach((name,i)=>{
+    const row=document.createElement('div'); row.className='prow';
+    const inp=document.createElement('input'); inp.type='text'; inp.maxLength=14; inp.value=name; inp.placeholder='Jugador '+(i+1);
+    inp.addEventListener('input',()=>{ players[i]=inp.value; });
+    row.appendChild(inp);
+    if(players.length>2){ const rm=document.createElement('button'); rm.className='icobtn'; rm.textContent='✕';
+      rm.onclick=()=>{ players.splice(i,1); renderPlayers(); }; row.appendChild(rm); }
+    list.appendChild(row);
+  });
+  $('#addPlayer').style.display = players.length>=6 ? 'none':'flex';
+}
+$('#addPlayer').onclick=()=>{ if(players.length<6){ players.push('Jugador '+(players.length+1)); renderPlayers(); } };
+$('#startGameBtn').onclick=()=>{
+  players = players.map((n,i)=> (n&&n.trim())? n.trim() : ('Jugador '+(i+1)));
+  if(players.length<2) players.push('Jugador 2');
+  STORE.save('jugadores',players);
+  startGame();
+};
+
+/* ===================== ESTADO DE PARTIDA ===================== */
+const g = { tema:null, sel:null, usadas:new Set(), ronda:1, racha:0, page:0,
+            dur:15, endAt:0, nextTick:0, urgentAt:5, raf:0, running:false, pausedRem:0 };
+let turnQueue=[], lastPlayer=null, curPlayer=null;
+
+const boardEl=$('#board'), themeEl=$('#themeText'), playerNameEl=$('#playerName'),
+      selBadge=$('#selBadge'), tNum=$('#tNum'), tBar=$('#tBar'), gameEl=$('#game'),
+      pRound=$('#pRound'), favBtn=$('#btnFav'), btnBasta=$('#btnBasta'), pageInd=$('#pageInd');
+const ovPause=$('#ovPause'), roundEnd=$('#roundEnd');
+
+/* ---- selección de tema ---- */
+function poolDisponible(){
+  let pool = TEMAS.filter(x=>{
+    if(cfg.modo==='ninos' && !x.tags.includes('ninos')) return false;
+    if(cfg.modo==='familiar' && x.tags.includes('adultos')) return false;
+    if(cfg.dificultad!=='todas' && !x.tags.includes(cfg.dificultad)) return false;
+    return true;
+  });
+  if(cfg.soloFav){ const f=pool.filter(x=>favoritos.includes(x.t)); if(f.length) pool=f; }
+  if(!pool.length) pool = TEMAS.filter(x=> cfg.modo==='ninos'? x.tags.includes('ninos') : (cfg.modo==='familiar'? !x.tags.includes('adultos'):true));
+  if(!pool.length) pool = TEMAS.slice();
+  return pool;
+}
+function pickTema(){
+  const pool = poolDisponible();
+  let cand = pool.filter(x=>!temasUsados.includes(x.t));
+  if(!cand.length){ temasUsados=[]; cand=pool; }
+  const t = cand[Math.floor(Math.random()*cand.length)];
+  temasUsados.push(t.t);
+  const cap = Math.max(8, Math.floor(pool.length*0.6));
+  if(temasUsados.length>cap) temasUsados=temasUsados.slice(-cap);
+  STORE.save('temasUsados',temasUsados);
+  return t;
+}
+/* ---- orden de jugadores: aleatorio sin repetir hasta que todos jueguen ---- */
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function nextPlayer(){
+  if(turnQueue.length===0){
+    turnQueue=shuffle(players);
+    if(players.length>1 && turnQueue[0]===lastPlayer) turnQueue.push(turnQueue.shift());
+  }
+  curPlayer=turnQueue.shift(); lastPlayer=curPlayer;
+  return curPlayer;
+}
+
+/* ===================== FLUJO ===================== */
+function startGame(){
+  if(!TEMAS.length){ alert('No se cargaron los temas.'); return; }
+  Snd.unlock();
+  stats.partidas++; saveStats();
+  g.usadas=new Set(); g.ronda=1; g.racha=0; g.sel=null; g.page=0;
+  turnQueue=[]; lastPlayer=null;
+  g.tema=pickTema();
+  show('game'); renderTheme();
+  Snd.roundStart();
+  newTurn();
+}
+function newTurn(){
+  g.sel=null;
+  nextPlayer();
+  renderTurn(); renderBoard(); renderHead(); updateBasta();
+  startTimer();
+}
+function renderTheme(){
+  themeEl.textContent=g.tema.t;
+  const fav=favoritos.includes(g.tema.t);
+  favBtn.textContent=fav?'❤':'♡'; favBtn.classList.toggle('on',fav);
+}
+function renderHead(){ pRound.textContent='Ronda '+g.ronda; }
+function renderTurn(){
+  playerNameEl.textContent=curPlayer||'—';
+  if(g.sel){ selBadge.style.display='flex'; selBadge.textContent=g.sel;
+    selBadge.style.background=colorOf(g.sel); selBadge.style.color=isDark(g.sel)?'#221a00':'#fff'; }
+  else selBadge.style.display='none';
+}
+function renderBoard(){
+  boardEl.innerHTML='';
+  const start=g.page*PER_PAGE, slice=ABC.slice(start,start+PER_PAGE);
+  slice.forEach(L=>{
+    const t=document.createElement('button'); t.className='tile'; t.textContent=L;
+    if(g.usadas.has(L)){ t.classList.add('used'); t.disabled=true; }
+    else { t.style.setProperty('--tc', colorOf(L)); }
+    if(L===g.sel){ t.classList.add('sel'); t.style.background=colorOf(L); t.style.color=isDark(L)?'#221a00':'#fff'; }
+    t.addEventListener('click',()=>selectLetter(L));
+    boardEl.appendChild(t);
+  });
+  pageInd.textContent=(g.page+1)+'/'+totalPages();
+}
+function selectLetter(L){
+  if(!g.running || g.usadas.has(L)) return;
+  g.sel = (g.sel===L) ? null : L;   // solo una a la vez; tocar de nuevo la quita
+  Snd.pick();
+  renderBoard(); renderTurn(); updateBasta();
+}
+function updateBasta(){
+  const en = !!g.sel && g.running;
+  btnBasta.disabled = !en;
+  btnBasta.classList.toggle('ready', en);
+}
+
+/* ---- temporizador ---- */
+function startTimer(){
+  g.dur=cfg.segundos;
+  g.urgentAt=Math.min(5, Math.max(3, Math.round(g.dur*0.3)));
+  g.endAt=performance.now()+g.dur*1000;
+  g.nextTick=performance.now()+1000;
+  g.running=true; gameEl.classList.remove('urgent'); updateBasta();
+  loop();
+}
+function loop(){
+  if(!g.running) return;
+  const now=performance.now(); let rem=(g.endAt-now)/1000;
+  if(rem<=0){ render(0); onTimeout(); return; }
+  render(rem);
+  const urgent=rem<=g.urgentAt; gameEl.classList.toggle('urgent',urgent);
+  if(now>=g.nextTick){ urgent?Snd.tickUrgent():Snd.tick(); g.nextTick=now+(urgent?500:1000); }
+  g.raf=requestAnimationFrame(loop);
+}
+let lastSec=-1;
+function render(rem){ const s=Math.ceil(rem); if(s!==lastSec){ tNum.textContent=s; lastSec=s; } tBar.style.width=Math.max(0,(rem/g.dur)*100)+'%'; }
+function stopTimer(){ g.running=false; cancelAnimationFrame(g.raf); }
+
+/* ---- BASTA (acierto) ---- */
+let busy=false;
+btnBasta.addEventListener('click',()=>{
+  if(!g.running||busy||!g.sel) return; busy=true;
+  stopTimer();
+  g.usadas.add(g.sel); g.racha++;
+  stats.aciertos++; if(g.racha>stats.mejorRacha) stats.mejorRacha=g.racha; saveStats();
+  Snd.correct(); vibrate(40); confetti();
+  btnBasta.disabled=true; btnBasta.classList.remove('ready');
+  setTimeout(()=>{
+    busy=false;
+    if(g.usadas.size>=ABC.length){           // todas usadas y nadie perdió -> segunda ronda mismo tema
+      g.usadas=new Set(); g.ronda++; stats.vueltas++; saveStats(); g.page=0; Snd.roundStart();
+    }
+    newTurn();
+  }, 480);
+});
+
+/* ---- tiempo agotado (perder) ---- */
+function onTimeout(){
+  stopTimer(); gameEl.classList.remove('urgent');
+  Snd.fail(); vibrate([90,60,160]);
+  stats.fallos++; if(g.racha>stats.mejorRacha) stats.mejorRacha=g.racha; saveStats();
+  historial.unshift({ jugador:curPlayer, tema:g.tema.t, racha:g.racha, fecha:Date.now() });
+  historial=historial.slice(0,20); STORE.save('historial',historial);
+  $('#endWho').textContent='Perdió '+(curPlayer||'—');
+  $('#endTheme').textContent='Tema: '+g.tema.t;
+  $('#endStreak').textContent=g.racha;
+  $('#endBest').textContent=stats.mejorRacha;
+  const card=roundEnd.querySelector('.card2'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+  show('roundEnd');
+}
+$('#againBtn').addEventListener('click',()=>{
+  roundEnd.classList.remove('active');
+  g.usadas=new Set(); g.ronda=1; g.racha=0; g.sel=null; g.page=0;
+  turnQueue=[]; lastPlayer=null;
+  g.tema=pickTema(); renderTheme(); Snd.roundStart(); newTurn();
+});
+$('#endQuit').addEventListener('click',()=>{ roundEnd.classList.remove('active'); stopTimer(); show('home'); });
+
+/* ---- pausa ---- */
+$('#btnPause').addEventListener('click',()=>{
+  if(!g.running) return;
+  g.pausedRem=(g.endAt-performance.now())/1000; stopTimer(); ovPause.classList.add('active');
+});
+$('#resumeBtn').addEventListener('click',()=>{
+  ovPause.classList.remove('active');
+  g.endAt=performance.now()+g.pausedRem*1000;
+  g.nextTick=performance.now()+(g.pausedRem<=g.urgentAt?500:1000);
+  g.running=true; updateBasta(); loop();
+});
+$('#quitBtn').addEventListener('click',()=>{ ovPause.classList.remove('active'); stopTimer(); show('home'); });
+
+/* ---- favorito / cambiar tema / más letras ---- */
+favBtn.addEventListener('click',()=>{
+  if(!g.tema) return; const t=g.tema.t; const i=favoritos.indexOf(t);
+  if(i>=0) favoritos.splice(i,1); else favoritos.push(t);
+  STORE.save('favoritos',favoritos); renderTheme();
+});
+$('#btnReroll').addEventListener('click',()=>{ if(!g.running) return; g.tema=pickTema(); renderTheme(); });
+$('#btnMore').addEventListener('click',()=>{ g.page=(g.page+1)%totalPages(); renderBoard(); });
+
+/* ---- confeti ---- */
+function confetti(){
+  try{ if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return; }catch(e){}
+  const wrap=document.createElement('div'); wrap.className='confetti';
+  const cols=['#ff4d5e','#2e8fff','#ffc42e','#29c26b','#ff8a2e','#a855f7'];
+  for(let i=0;i<26;i++){ const p=document.createElement('i');
+    p.style.left=Math.random()*100+'%'; p.style.background=cols[i%6];
+    p.style.animationDelay=(Math.random()*.2)+'s'; p.style.animationDuration=(.8+Math.random()*.6)+'s';
+    wrap.appendChild(p); }
+  gameEl.appendChild(wrap); setTimeout(()=>wrap.remove(),1500);
+}
+
+/* ===================== AJUSTES UI ===================== */
+function renderSettings(){
+  $('#secVal').textContent=cfg.segundos;
+  document.querySelectorAll('#segModo button').forEach(b=>b.classList.toggle('sel',b.dataset.v===cfg.modo));
+  document.querySelectorAll('#segDif button').forEach(b=>b.classList.toggle('sel',b.dataset.v===cfg.dificultad));
+  $('#swSound').classList.toggle('on',cfg.sonido);
+  $('#swVib').classList.toggle('on',cfg.vibracion);
+  $('#swFav').classList.toggle('on',cfg.soloFav);
+}
+$('#secMinus').onclick=()=>{ cfg.segundos=Math.max(5,cfg.segundos-5); saveCfg(); renderSettings(); };
+$('#secPlus').onclick =()=>{ cfg.segundos=Math.min(60,cfg.segundos+5); saveCfg(); renderSettings(); };
+document.querySelectorAll('#segModo button').forEach(b=>b.onclick=()=>{ cfg.modo=b.dataset.v; saveCfg(); renderSettings(); });
+document.querySelectorAll('#segDif button').forEach(b=>b.onclick=()=>{ cfg.dificultad=b.dataset.v; saveCfg(); renderSettings(); });
+$('#swSound').onclick=()=>{ cfg.sonido=!cfg.sonido; saveCfg(); renderSettings(); if(cfg.sonido){ Snd.unlock(); Snd.correct(); } };
+$('#swVib').onclick  =()=>{ cfg.vibracion=!cfg.vibracion; saveCfg(); renderSettings(); vibrate(40); };
+$('#swFav').onclick  =()=>{ cfg.soloFav=!cfg.soloFav; saveCfg(); renderSettings(); };
+$('#btnResetCfg').onclick=()=>{ cfg=Object.assign({},CFG_DEF); saveCfg(); renderSettings(); };
+
+/* ===================== ESTADÍSTICAS UI ===================== */
+function renderStats(){
+  $('#sBest').textContent=stats.mejorRacha; $('#sGames').textContent=stats.partidas;
+  $('#sRounds').textContent=stats.rondas+stats.vueltas; $('#sOk').textContent=stats.aciertos;
+  $('#sFail').textContent=stats.fallos; $('#sLaps').textContent=stats.vueltas;
+  $('#sFav').textContent=favoritos.length;
+}
+$('#btnResetStats').onclick=()=>{ stats={partidas:0,rondas:0,aciertos:0,fallos:0,mejorRacha:0,vueltas:0}; saveStats(); renderStats(); };
+
+/* ===================== ARRANQUE ===================== */
+document.addEventListener('pointerdown',()=>Snd.unlock(),{once:true});
+setTimeout(()=>{ if(activeId()==='splash') show('home'); }, 1700);
+if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
+</script>
+</body>
+</html>
